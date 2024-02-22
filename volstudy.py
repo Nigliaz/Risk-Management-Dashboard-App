@@ -304,7 +304,7 @@ def app():
         zaxis_title='Annualized Volatility',
         yaxis_autorange='reversed',
         camera=dict(
-            eye=dict(x=2, y=-2, z=0.5)  # Adjust these values to change the viewpoint
+            eye=dict(x=.8, y=-1.5, z=0.3)  # Adjust these values to change the viewpoint
         )
     ),
     height=800  # Set the height of the figure (in pixels)
