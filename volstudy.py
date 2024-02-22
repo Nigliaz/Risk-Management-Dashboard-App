@@ -28,15 +28,15 @@ def app():
     import requests
     import streamlit as st
 
-    if "window_size" not in st.session_state:
-        st.session_state.window_size = 100
+ 
     if "instrument1" not in st.session_state:
         st.session_state.instrument1 = "USD_MXN"
     if "granularity" not in st.session_state:
         st.session_state.granularity = "D"
     if "count1" not in st.session_state:
         st.session_state.count1 = 1000
-   
+    if 'window_size' not in st.session_state:
+        st.session_state.window_size = max(2, min(10, int(st.session_state.count1 / 2)))  
 
 
     frequency_to_periods = {
@@ -125,12 +125,12 @@ def app():
     'USD_SEK', 'USD_SGD', 'USD_THB', 'USD_TRY', 'USD_ZAR', 'EUR_CHF', 'EUR_DKK', 'EUR_PLN',
     'EUR_SEK', 'GBP_JPY', 'AUD_JPY', 'USD_HKD', 'USD_HUF', 'USD_ILS', 'USD_CZK', 'USD_QAR',
     'EUR_OMR', 'EUR_KWD', 'USD_AED'
-    ])
+    ], default = ['EUR_USD', 'GBP_USD'])
 
     
-    granularity = 'D'
-    count1 = 1000
-    fetch_fx_data(currencies, granularity, count1)
+    st.session_state.granularity = 'D'
+    st.session_state.count1 = 1000
+    fetch_fx_data(currencies, st.session_state.granularity, st.session_state.count1)
     plot_volatility_charts()
 
     # Assuming `data_frames` is a dictionary containing the data frames of currency pairs with 'Close' prices
@@ -170,10 +170,27 @@ def app():
     fig.update_layout(title='Portfolio Volatility Over Time',
                     xaxis_title='Date', yaxis_title='Portfolio Volatility')
     st.plotly_chart(fig, use_container_width=True)
-    st.slider("How many periods would you like to consider for your volatility Window?", min_value= 2, max_value= int(st.session_state.count1/2), key = "window_size")
-    st.selectbox("Select Granularity", options=['S5', 'S10', 'S15', 'S30', 'M1', 'M2', 'M4', 'M5', 'M10', 'M15', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D', 'W', 'M'], key='granularity')
-    st.number_input("Number of Data Points for FX", min_value=1, value=500, key = 'count1')
+    # Now use 'window_size' as the default value for the slider
+    window_size = st.slider(
+        "How many periods would you like to consider for your volatility Window?",
+        min_value=2,
+        max_value=int(st.session_state.count1 / 2),
+        value=st.session_state.window_size,  # Use the session state value as the default
+        key="window_size"
+    )
+    granularity = st.selectbox(
+        "Select Granularity",
+        options=['S5', 'S10', 'S15', 'S30', 'M1', 'M2', 'M4', 'M5', 'M10', 'M15', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D', 'W', 'M'],
+        key='granularity',
+        index=['S5', 'S10', 'S15', 'S30', 'M1', 'M2', 'M4', 'M5', 'M10', 'M15', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D', 'W', 'M'].index(st.session_state.granularity)  # Set default by finding the index
+    )
 
+    count1 = st.number_input(
+        "Number of Data Points for FX",
+        min_value=1,
+        value=st.session_state.count1,  # Use session state value as default
+        key='count1'
+    )
 
 
     volcurrency = st.sidebar.selectbox("Which currency would you like to view a vol surface for? A separate window will be generated.", [
@@ -181,7 +198,7 @@ def app():
         'USD_SEK', 'USD_SGD', 'USD_THB', 'USD_TRY', 'USD_ZAR', 'EUR_CHF', 'EUR_DKK', 'EUR_PLN',
         'EUR_SEK', 'GBP_JPY', 'AUD_JPY', 'USD_HKD', 'USD_HUF', 'USD_ILS', 'USD_CZK', 'USD_QAR',
         'EUR_OMR', 'EUR_KWD', 'USD_AED'
-        ], key="volcurrrency")
+        ], key="volcurrency")
 
 
 
