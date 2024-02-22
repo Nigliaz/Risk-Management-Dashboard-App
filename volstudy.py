@@ -171,6 +171,8 @@ def app():
                     xaxis_title='Date', yaxis_title='Portfolio Volatility')
     st.plotly_chart(fig, use_container_width=True)
     # Now use 'window_size' as the default value for the slider
+
+    
     window_size = st.slider(
         "How many periods would you like to consider for your volatility Window?",
         min_value=2,
@@ -202,112 +204,112 @@ def app():
 
 
 
-    st.sidebar.button("Generate Volatility Surface", key='gensurface' )
-    if st.session_state.gensurface:
+    # st.sidebar.button("Generate Volatility Surface", key='gensurface' )
+    # if st.session_state.gensurface:
 
+    #st.write(st.session_state.volcurrency)
+    def fetch_fx_data_single_currency(currency = st.session_state.volcurrency, granularity='D', days=1000):
+        """
+        Fetch FX data for a single currency over the specified number of days.
 
-        def fetch_fx_data_single_currency(currency = st.session_state.volcurrency, granularity='D', days=1000):
-            """
-            Fetch FX data for a single currency over the specified number of days.
+        Args:
+        currency (str): The currency pair to fetch data for (e.g., 'USD_MXN').
+        granularity (str): The granularity of the data ('D' for daily).
+        days (int): The number of days of data to fetch.
 
-            Args:
-            currency (str): The currency pair to fetch data for (e.g., 'USD_MXN').
-            granularity (str): The granularity of the data ('D' for daily).
-            days (int): The number of days of data to fetch.
+        Returns:
+        pd.DataFrame: DataFrame with the fetched data, indexed by timestamp.
+        """
+        bearer_token = os.environ.get('OANDA_API_KEY')
 
-            Returns:
-            pd.DataFrame: DataFrame with the fetched data, indexed by timestamp.
-            """
-            bearer_token = os.environ.get('OANDA_API_KEY')
+        # Calculate the 'to' and 'from' parameters based on the current date and the number of days
+        to_date = datetime.utcnow()
+        from_date = to_date - timedelta(days=days)
 
-            # Calculate the 'to' and 'from' parameters based on the current date and the number of days
-            to_date = datetime.utcnow()
-            from_date = to_date - timedelta(days=days)
+        # Convert dates to the format required by the OANDA API
+        to_date_str = to_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        from_date_str = from_date.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-            # Convert dates to the format required by the OANDA API
-            to_date_str = to_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-            from_date_str = from_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # OANDA API endpoint for fetching candle data
+        endpoint = f"https://api-fxpractice.oanda.com/v3/instruments/{currency}/candles"
 
-            # OANDA API endpoint for fetching candle data
-            endpoint = f"https://api-fxpractice.oanda.com/v3/instruments/{currency}/candles"
+        # Set up the headers and parameters for the API request
+        headers = {'Authorization': f'Bearer {bearer_token}', 'Content-Type': 'application/json'}
+        params = {
+            'from': from_date_str,
+            'to': to_date_str,
+            'granularity': granularity,
+            'price': 'M'  # Midpoint prices
+        }
 
-            # Set up the headers and parameters for the API request
-            headers = {'Authorization': f'Bearer {bearer_token}', 'Content-Type': 'application/json'}
-            params = {
-                'from': from_date_str,
-                'to': to_date_str,
-                'granularity': granularity,
-                'price': 'M'  # Midpoint prices
-            }
+        # Make the API request
+        response = requests.get(endpoint, headers=headers, params=params)
 
-            # Make the API request
-            response = requests.get(endpoint, headers=headers, params=params)
+        # Check for successful response
+        if response.status_code == 200:
+            fx_data = response.json()
+            prices = fx_data['candles']
 
-            # Check for successful response
-            if response.status_code == 200:
-                fx_data = response.json()
-                prices = fx_data['candles']
+            # Prepare the data for DataFrame
+            rows = []
+            for candle in prices:
+                if candle['complete']:
+                    row = {
+                        'Timestamp': pd.to_datetime(candle['time']),
+                        'Open': float(candle['mid']['o']),
+                        'High': float(candle['mid']['h']),
+                        'Low': float(candle['mid']['l']),
+                        'Close': float(candle['mid']['c'])
+                    }
+                    rows.append(row)
 
-                # Prepare the data for DataFrame
-                rows = []
-                for candle in prices:
-                    if candle['complete']:
-                        row = {
-                            'Timestamp': pd.to_datetime(candle['time']),
-                            'Open': float(candle['mid']['o']),
-                            'High': float(candle['mid']['h']),
-                            'Low': float(candle['mid']['l']),
-                            'Close': float(candle['mid']['c'])
-                        }
-                        rows.append(row)
+            # Create and return the DataFrame
+            df = pd.DataFrame(rows)
+            df.set_index('Timestamp', inplace=True)
+            return df
+        else:
+            # Handle errors (e.g., logging, raising an exception)
+            raise Exception(f"Error fetching data: {response.status_code}, {response.text}")
 
-                # Create and return the DataFrame
-                df = pd.DataFrame(rows)
-                df.set_index('Timestamp', inplace=True)
-                return df
-            else:
-                # Handle errors (e.g., logging, raising an exception)
-                raise Exception(f"Error fetching data: {response.status_code}, {response.text}")
+    # Example usage
+    
+    df = fetch_fx_data_single_currency()
+   # st.write(df)
+    # Display the DataFrame (optional, for verification)
+    
+    df['Returns'] = df['Close'].pct_change()
+    df.dropna(inplace=True)
 
-        # Example usage
-       
-        df = fetch_fx_data_single_currency(currency)
+    # Prepare arrays for 3D plotting
+    time = pd.to_datetime(df.index).values
+    window_sizes = np.arange(5, 201, 10)  # From 5 to 200 in 10-day increments
+    volatility_surface = np.zeros((len(window_sizes), len(df)))
 
-        # Display the DataFrame (optional, for verification)
-     
-        df['Returns'] = df['Close'].pct_change()
-        df.dropna(inplace=True)
+    # Calculate annualized volatility for each window size
+    for i, window in enumerate(window_sizes):
+        rolling_std = df['Returns'].rolling(window=window).std()
+        annualized_vol = rolling_std * np.sqrt(252)  # Assuming 252 trading days in a year
+        volatility_surface[i, :] = annualized_vol.values
 
-        # Prepare arrays for 3D plotting
-        time = pd.to_datetime(df.index).values
-        window_sizes = np.arange(5, 201, 10)  # From 5 to 200 in 10-day increments
-        volatility_surface = np.zeros((len(window_sizes), len(df)))
+    # Create mesh grids for plotting
+    T, W = np.meshgrid(time, window_sizes)
 
-        # Calculate annualized volatility for each window size
-        for i, window in enumerate(window_sizes):
-            rolling_std = df['Returns'].rolling(window=window).std()
-            annualized_vol = rolling_std * np.sqrt(252)  # Assuming 252 trading days in a year
-            volatility_surface[i, :] = annualized_vol.values
-
-        # Create mesh grids for plotting
-        T, W = np.meshgrid(time, window_sizes)
-
-        # Plotting the 3D volatility surface
-        fig = go.Figure(data=[go.Surface(z=volatility_surface, x=T, y=W)])
-        fig.update_layout(
-        title='3D Volatility Surface',
-        scene=dict(
-            xaxis_title='Time',
-            yaxis_title='Look Back Window Size',
-            zaxis_title='Annualized Volatility'
-        ),
-        height=800  # Set the height of the figure (in pixels)
+    # Plotting the 3D volatility surface
+    fig = go.Figure(data=[go.Surface(z=volatility_surface, x=T, y=W)])
+    fig.update_layout(
+    title='3D Volatility Surface',
+    scene=dict(
+        xaxis_title='Time',
+        yaxis_title='Look Back Window Size',
+        zaxis_title='Annualized Volatility'
+    ),
+    height=800  # Set the height of the figure (in pixels)
     )
 
     # Display the figure in Streamlit, using the full container width
     st.plotly_chart(fig, use_container_width=True)
 
 
-    
-  
+
+
     
