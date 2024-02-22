@@ -295,15 +295,17 @@ def app():
         # Plotting the 3D volatility surface
         fig = go.Figure(data=[go.Surface(z=volatility_surface, x=T, y=W)])
         fig.update_layout(
-            title='3D Volatility Surface',
-            scene=dict(
-                xaxis_title='Time',
-                yaxis_title='Look Back Window Size',
-                zaxis_title='Annualized Volatility'
-            )
-        )
+        title='3D Volatility Surface',
+        scene=dict(
+            xaxis_title='Time',
+            yaxis_title='Look Back Window Size',
+            zaxis_title='Annualized Volatility'
+        ),
+        height=800  # Set the height of the figure (in pixels)
+    )
 
-        fig.show()
+    # Display the figure in Streamlit, using the full container width
+    st.plotly_chart(fig, use_container_width=True)
 
 
     
