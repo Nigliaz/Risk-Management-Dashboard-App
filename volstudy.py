@@ -36,7 +36,7 @@ def app():
     if "count1" not in st.session_state:
         st.session_state.count1 = 1000
     if 'window_size' not in st.session_state:
-        st.session_state.window_size = max(2, min(10, int(st.session_state.count1 / 2)))  
+        st.session_state.window_size = 90
 
 
     frequency_to_periods = {
@@ -176,7 +176,7 @@ def app():
     window_size = st.slider(
         "How many periods would you like to consider for your volatility Window?",
         min_value=2,
-        max_value=int(st.session_state.count1 / 2),
+        max_value=200,
         value=st.session_state.window_size,  # Use the session state value as the default
         key="window_size"
     )
@@ -301,7 +301,11 @@ def app():
     scene=dict(
         xaxis_title='Time',
         yaxis_title='Look Back Window Size',
-        zaxis_title='Annualized Volatility'
+        zaxis_title='Annualized Volatility',
+        yaxis_autorange='reversed',
+        camera=dict(
+            eye=dict(x=2, y=-2, z=0.5)  # Adjust these values to change the viewpoint
+        )
     ),
     height=800  # Set the height of the figure (in pixels)
     )
