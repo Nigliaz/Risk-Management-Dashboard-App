@@ -123,6 +123,9 @@ def app():
     if 'interest_rate_diff1' not in st.session_state:
         st.session_state.interest_rate_diff1 = quote_interest_rate - base_interest_rate
 
+    if "count1" not in st.session_state:
+        st.session_state.count1 = 1000   
+
 
     L,M,R  = st.columns((2.2, 4.5,2.2), gap='large')
 
@@ -131,37 +134,25 @@ def app():
         st.subheader("Volatility Analytics Module")
 
         #########VOL MODULE################################################################################
-        def fetch_fx_data(instrument1, granularity, count1):
-            # OANDA credentials (use environment variables or Streamlit secrets for production)
+        def fetch_fx_data(i, g, c):
             bearer_token = st.secrets['OANDA_API_KEY'] #os.environ.get('OANDA_API_KEY')
-            
-            # OANDA API endpoint for candlestick data
-            endpoint = f"https://api-fxpractice.oanda.com/v3/instruments/{instrument1}/candles"
-            
-            # Set the request headers with the bearer token
+            endpoint = f"https://api-fxpractice.oanda.com/v3/instruments/{i}/candles"
             headers = {
                 'Authorization': f'Bearer {bearer_token}',
                 'Content-Type': 'application/json'
             }
-
-            # Fetch the candlestick data
             params = {
-                'granularity': granularity,
-                'count': count1,
+                'granularity': g,
+                'count': c,
                 'price': 'M'
             }
-            
             response = requests.get(endpoint, headers=headers, params=params)
-            
             if response.status_code != 200:
                 st.error(f"Error fetching data from OANDA: {response.status_code}")
                 st.text(f"Response: {response.text}")  # This will print the error details
                 return pd.DataFrame()  # Return an empty DataFrame on error
-
-            # Process the response JSON and convert to DataFrame
             fx_data = response.json()
             prices = fx_data['candles']
-            
             rows = []
             for candle in prices:
                 if candle['complete']:  # Only take complete candles
@@ -173,12 +164,9 @@ def app():
                         'Close': float(candle['mid']['c'])
                     }
                     rows.append(row)
-
             df = pd.DataFrame(rows)
             df.set_index('Timestamp', inplace=True)
             return df
-
-
 
         def plot_candlestick_chart_with_volatility(df, overlay_volatility=False):
             fig = go.Figure(data=[go.Candlestick(x=df.index,
@@ -213,8 +201,7 @@ def app():
             st.session_state.window_size = 100
         if "granularity" not in st.session_state:
             st.session_state.granularity = "D"
-        if "count1" not in st.session_state:
-            st.session_state.count1 = 1000
+      
 
 
         frequency_to_periods = {
@@ -301,13 +288,13 @@ def app():
 
 
         @st.cache_data
-        def run_simulation(rate1, sim_vol1, num_steps1, num_iterations1, interest_rate_diff1, epy1):
-            delta_t = 1 / epy1
-            drift = (interest_rate_diff1 - 0.5 * sim_vol1**2) * delta_t
-            samples = np.random.normal(drift, sim_vol1 * np.sqrt(delta_t), size=(num_iterations1, num_steps1))
+        def run_simulation(r, sv, ns, ni, ird, ep):
+            delta_t = 1 / ep
+            drift = (ird - 0.5 * sv**2) * delta_t
+            samples = np.random.normal(drift, sv * np.sqrt(delta_t), size=(ni, ns))
             cumulative_products = np.cumprod(1 + samples, axis=1)
              # Initialize the starting rates array with the shape (num_iterations1, 1) filled with rate1
-            starting_rates = np.full((num_iterations1, 1), rate1)
+            starting_rates = np.full((ni, 1), r)
 
             # Append the cumulative_products to the starting_rates
             # This makes the first value of each path rate1
@@ -443,7 +430,7 @@ def app():
         #st.markdown("<hr>", unsafe_allow_html=True)
         st.caption(f"The bar chart below depicts the {selected_value1}th percentile gain/loss of each expiry along the {st.session_state.num_steps1} selected expiries. Feel free to use the percentile slider in the sidebar to examine the universe of possibilities. Percentile calculations are sensitive to you current volatiltiy of {st.session_state.sim_vol1} and the interest rates. ")
         
-        st.markdown("<hr><br><br><br><br><br><br><br><hr>", unsafe_allow_html=True) 
+        st.markdown("<hr><br><br><br><br><br><br><hr>", unsafe_allow_html=True) 
         st.subheader(f"Histogram of Returns at {st.session_state.num_steps1}th Expiry")   
         #st.markdown("<hr>", unsafe_allow_html=True)  
         st.caption(f"The histogram is alternative way of considering the risk. It provides a more holistiv view of the shape of the distribution. This can be extremely helpful when considerin the real risks of going unhedged.")
