@@ -12,36 +12,12 @@ from datetime import datetime, timedelta
 from PIL import Image
 import json
 import os
+import requests
 
 #Gets user input
-
-def app():
-    # Page Configuration
-
-
-    if st.sidebar.button("Refresh"):
-    # Use Streamlit's session state to trigger a rerun when the button is clicked
-        st.session_state['refresh'] = not st.session_state.get('refresh', False)
-
-    
-    col1,col2 = st.sidebar.columns(2)
-    with col1:
-    
-        instrument1 = st.text_input("Enter Instrument", value="USD_MXN", key="instrument1")
-    
-    with col2:
-    
-        start_date1=st.date_input("Start Date", value= 'today', key= "start_date")
-
-    
-
- 
-
-    import requests
-
-    def fetch_most_recent_close_price(instrument1):
+def fetch_most_recent_close_price(i):
         bearer_token = st.secrets['OANDA_API_KEY'] #os.environ.get('OANDA_API_KEY')
-        endpoint = f"https://api-fxpractice.oanda.com/v3/instruments/{instrument1}/candles"
+        endpoint = f"https://api-fxpractice.oanda.com/v3/instruments/{i}/candles"
         headers = {'Authorization': f'Bearer {bearer_token}'}
         params = {'granularity': 'M1', 'count': 1, 'price': 'M'}  # 'M' for Midpoint for minimal data
 
@@ -58,25 +34,38 @@ def app():
         pass
 
 
+def app():
+    # Page Configuration
+    if st.sidebar.button("Refresh"):
+        # Use Streamlit's session state to trigger a rerun when the button is clicked
+        st.session_state['refresh'] = not st.session_state.get('refresh', False)
+    
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        # This will automatically update st.session_state.instrument1
+        st.text_input("Enter Instrument", key="instrument1", value="EUR_USD")
+    
+    with col2:
+        start_date1 = st.date_input("Start Date", value='today', key="start_date")
 
-    most_recent_close_price = fetch_most_recent_close_price(instrument1)
+    
 
     action = st.sidebar.radio("Are you buying or selling the base ccy?", ('Sell', 'Buy'), key="bs")
 
-    starting_rate1 = most_recent_close_price
+
+   
     
 
-    if 'rate1' not in st.session_state:
-        st.session_state.rate1 = starting_rate1 
+    
+    st.session_state.rate1 = fetch_most_recent_close_price(st.session_state.instrument1)
 
-    if 'strike1' not in st.session_state:
-        st.session_state.strike1 = starting_rate1
+   
+    st.session_state.strike1 = fetch_most_recent_close_price(st.session_state.instrument1)
 
     if 'sim_vol1' not in st.session_state:
         st.session_state.sim_vol1 = 0.11
 
-    if 'cob_target1' not in st.session_state:
-        st.session_state.cob_target1 = starting_rate1 * 0.1
+
 
    
 
@@ -102,7 +91,7 @@ def app():
         st.number_input("Expiries per Year", min_value=0, max_value=365, key="epy1")
         
     with c2:
-        st.number_input(f"Amount in {instrument1[4:]}", min_value=0.0, max_value=1000000000.0, value=10000.0, key="notional")
+        st.number_input(f"Amount in {st.session_state.instrument1[4:]}", min_value=0.0, max_value=1000000000.0, value=10000.0, key="notional")
         st.number_input("Expiries", min_value=0, max_value=365, key="num_steps1")
 
     st.sidebar.number_input("Iterations", min_value=1000, max_value=1000000, key="num_iteration1")
@@ -293,13 +282,8 @@ def app():
             drift = (ird - 0.5 * sv**2) * delta_t
             samples = np.random.normal(drift, sv * np.sqrt(delta_t), size=(ni, ns))
             cumulative_products = np.cumprod(1 + samples, axis=1)
-             # Initialize the starting rates array with the shape (num_iterations1, 1) filled with rate1
             starting_rates = np.full((ni, 1), r)
-
-            # Append the cumulative_products to the starting_rates
-            # This makes the first value of each path rate1
             paths = np.hstack((starting_rates, starting_rates * cumulative_products))
-
             return paths
 
         simulation_results1 = run_simulation(
@@ -422,7 +406,7 @@ def app():
         st.markdown("<br><br><br><hr>", unsafe_allow_html=True) 
         st.subheader("Vectorized Montecarlo")   
         #st.markdown("<hr>", unsafe_allow_html=True)
-        st.caption(f"The plot below is a sampling of a vectorized montecarlo simulation. This approach is commonly used in exotic financial derivatives that exhibit path-dependent behaviors. Our use case is distinct, we are using the simulation to determine the probability of gains and losses agasint our budget rate under current and hypothetical market scenarios. Please use the volatility tool and interest rates to stress test various scenarios. Your current scenario settings have created an average terminal rate of {np.mean(simulation_results1):.2f}. This represents the mean future value of {instrument1} and should be carefully considered.")
+        st.caption(f"The plot below is a sampling of a vectorized montecarlo simulation. This approach is commonly used in exotic financial derivatives that exhibit path-dependent behaviors. Our use case is distinct, we are using the simulation to determine the probability of gains and losses agasint our budget rate under current and hypothetical market scenarios. Please use the volatility tool and interest rates to stress test various scenarios. Your current scenario settings have created an average terminal rate of {np.mean(simulation_results1):.2f}. This represents the mean future value of {st.session_state.instrument1} and should be carefully considered.")
         
         
         st.markdown("<hr><br><br><br><br><hr>", unsafe_allow_html=True)
@@ -435,6 +419,8 @@ def app():
         #st.markdown("<hr>", unsafe_allow_html=True)  
         st.caption(f"The histogram is alternative way of considering the risk. It provides a more holistiv view of the shape of the distribution. This can be extremely helpful when considerin the real risks of going unhedged.")
         st.markdown("<hr>", unsafe_allow_html=True)  
+
+        # st.write(st.session_state)
 
 
 
