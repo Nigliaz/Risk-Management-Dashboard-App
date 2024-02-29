@@ -16,6 +16,7 @@ from streamlit_autorefresh import st_autorefresh
 import json
 import News
 import os
+import ts_forecast
 
 st.set_page_config(page_title="Speckled Kingsnake", layout="wide")
 
@@ -138,10 +139,11 @@ if 'get_started_clicked' not in st.session_state:
 
 # Display introductory text and the landing page by default
 if not st.session_state['get_started_clicked']:
-    st.sidebar.write("Welcome to Speckled Kingsnake - a GPS proprietary risk tool designed for pricing and managing derivatives. Let's get started!")
+    st.sidebar.write("Welcome to Speckled Kingsnake - a Nigliazzo proprietary risk tool designed for managing FX exposure. Let's get started!")
     st.sidebar.write("- (2-13-2024) Version 1.0 supports TARFs and vanilla structures")
     st.sidebar.write("- (2-14-2024) Version 1.1 added a new cash flow hedging module and streaming news")
     st.sidebar.write("- (2-20-2024) Version 1.1 added a new cash flow hedging module and streaming news")
+    st.sidebar.write("- (2-29-2024) Version 1.2 added a a facebook prophet model integration for time-series forecasting and seasonality analysis")
     landing.app()
 
     # Place the "Get Started" button after the text and the landing page content
@@ -154,7 +156,7 @@ if not st.session_state['get_started_clicked']:
 # After the "Get Started" button is pressed, display the radio selection
 if st.session_state['get_started_clicked']:
     # Define your options for the radio selection
-    options = ["CFAR Tool", "Volatiltiy Studies", "News"]
+    options = ["CFAR Tool", "Volatiltiy Studies", "Times-Series Forecast", "News"]
     choice = st.sidebar.radio("Where would you like to be directed?", options=options)
     
     
@@ -163,7 +165,10 @@ if st.session_state['get_started_clicked']:
     
     if choice == "CFAR Tool":
         cfar.app()
-   
+
+    if choice == "Times-Series Forecast":
+        ts_forecast.app()
+
     if choice == "News":
         News.app()
 
