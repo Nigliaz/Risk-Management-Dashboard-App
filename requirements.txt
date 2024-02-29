@@ -9,3 +9,4 @@ scipy==1.10.0
 streamlit-aggrid
 streamlit_autorefresh
 pyfinviz
+prophet
