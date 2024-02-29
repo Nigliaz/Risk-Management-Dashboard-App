@@ -48,7 +48,7 @@ def app():
     c1, c2 = st.sidebar.columns(2)
 
     # st.text_input("Enter Instrument", key="instrument1", value="EUR_USD")
-    st.sidebar.selectbox("Which currency would you like to view a vol surface for? A separate window will be generated.", [
+    st.sidebar.selectbox("Which currency would you like to view a forecast for?", [
         'EUR_USD', 'GBP_USD', 'USD_MXN', 'USD_CAD', 'USD_JPY', 'AUD_USD', 'USD_CNH', 'NZD_USD',
         'USD_SEK', 'USD_SGD', 'USD_THB', 'USD_TRY', 'USD_ZAR', 'EUR_CHF', 'EUR_DKK', 'EUR_PLN',
         'EUR_SEK', 'GBP_JPY', 'AUD_JPY', 'USD_HKD', 'USD_HUF', 'USD_ILS', 'USD_CZK', 'USD_QAR',
@@ -173,8 +173,10 @@ def app():
      
 
        
-        st.sidebar.selectbox("Select Granularity", options=['S5', 'S10', 'S15', 'S30', 'M1', 'M2', 'M4', 'M5', 'M10', 'M15', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D', 'W', 'M'], key='granularity')
-        st.sidebar.number_input("Number of Data Points for FX", min_value=1, value=500, key = 'count1')
+        #st.sidebar.selectbox("Select Granularity", options=['S5', 'S10', 'S15', 'S30', 'M1', 'M2', 'M4', 'M5', 'M10', 'M15', 'M30', 'H1', 'H2', 'H3', 'H4', 'H6', 'H8', 'H12', 'D', 'W', 'M'], key='granularity')
+        st.session_state.granularity = "D"
+        st.session_state.count1 = 1000
+        #st.sidebar.number_input("Number of Data Points for FX", min_value=1, value=500, key = 'count1')
 
         #########END OF VOL MODULE##################################################################################################################
 
